@@ -58,7 +58,7 @@ table {
 
 body {
   font-family: 'Roboto', sans-serif;
-  font-size: 16px;
+  font-size: 14px;
   background: #F5D76E;
   color: var(--font-color);
   padding-bottom: 80px;
@@ -170,7 +170,6 @@ a {
 .meta {
   color: #666;
   padding-top: 10px;
-  font-size: .8rem;
 }
 .plot {
   padding-top: 15px;

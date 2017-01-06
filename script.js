@@ -90,12 +90,12 @@ let movieSearch = (function() {
           <div class="movie" id="${json.imdbID}">
             <div class="poster-container"></div>
             <div class="description">
-              <h2 class="title">${json.Title} (${json.Year})</h2>
+              <span class="title">${json.Title} </span><span class="year"> (${json.Year})</span>
               <div class="meta">
                 <p><span class="meta-title">Genre:</span> ${json.Genre}</p>
                 <p><span class="meta-title">Rating:</span> ${json.imdbRating}</p>
               </div>
-              <p class="plot short"><span class="meta-title">Short plot:</span> ${json.Plot}</p>
+              <p class="plot short"><span class="meta-title">Plot:</span> ${json.Plot}</p>
             </div>
           </div>
         `);
@@ -159,7 +159,7 @@ let movieSearch = (function() {
             <p><span class="meta-title">Awards:</span> ${json.Awards}</p>
           </div>
         `);
-        let $fullPlot = $(`<p class="plot full" style="display:none"><span class="meta-title">Full plot:</span> ${json.Plot}</p>`);
+        let $fullPlot = $(`<p class="plot full" style="display:none"><span class="meta-title">Plot:</span> ${json.Plot}</p>`);
         $movie.find('.short.plot').hide();
         $meta.appendTo($movie.find('.meta')).toggle('slow');
         $fullPlot.appendTo($movie.find('.description')).toggle('slow');
