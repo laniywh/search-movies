@@ -9,13 +9,15 @@ let movieSearch = (function() {
   const $numOfResult = $('.num-of-result');
   const $loader = $('<img class="loader" src="loader.svg">');
 
-  let currPage = 0;
-  let moviesLeft = 0;
-  let request;
+  let currPage, moviesLeft, loading;
 
   let init = function() {
+    moviesLeft = 0
+    loading = false;
+
     listenForSearch();
     showMoreMovies();
+    checkLoading();
   };
 
   let newResult = function() {
@@ -26,12 +28,18 @@ let movieSearch = (function() {
     showMovies();
   };
 
+  let checkLoading = function() {
+    $(document).ajaxStart(function() {
+                loading = true;
+               })
+               .ajaxStop(function() {
+                 loading = false;
+               });
+  };
+
   // Show 1 page of movies
   let showMovies = function() {
-    // Prevent executing the same ajax again
-    if(request) return;
-
-    request = $.ajax({
+    $.ajax({
         url: "http://www.omdbapi.com/?",
         data: {
           s: $searchBox.val(),
@@ -65,14 +73,11 @@ let movieSearch = (function() {
 
         moviesLeft -= MOV_PER_PAGE;
         currPage++;
-      })
-      .always(function() {
-        request = undefined;
       });
   };
 
   let showMovie = function(id) {
-    request = $.ajax({
+    $.ajax({
       url: "http://www.omdbapi.com/?",
       data: {
         i: id,
@@ -124,7 +129,7 @@ let movieSearch = (function() {
         let totalHeight = $(document).height();
         let scrollPosition = $(window).height() + $(window).scrollTop();
 
-        if (totalHeight - scrollPosition === 0) {
+        if (totalHeight - scrollPosition === 0 && !loading) {
           // when scroll to bottom of the page
           $movies.append($loader);
           showMovies();
