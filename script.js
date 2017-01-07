@@ -11,13 +11,14 @@ let movieSearch = (function() {
 
   let currPage, moviesLeft, loading;
 
+
   let init = function() {
     moviesLeft = 0
     loading = false;
 
-    listenForSearch();
+    onSearch();
     showMoreMovies();
-    checkLoading();
+    updateAjaxLoadingStatus();
   };
 
   let newResult = function() {
@@ -25,10 +26,12 @@ let movieSearch = (function() {
     $movies.children().remove();
 
     currPage = 1;
-    showMovies();
+
+    requestMovies();
   };
 
-  let checkLoading = function() {
+
+  let updateAjaxLoadingStatus = function() {
     $(document).ajaxStart(function() {
                 loading = true;
                })
@@ -37,85 +40,105 @@ let movieSearch = (function() {
                });
   };
 
-  // Show 1 page of movies
-  let showMovies = function() {
+
+  let showLoader = function($loaderContainer) {
+    $loaderContainer.append($loader);
+  };
+
+
+  let requestMovies = function() {
+    // Data for requesting movies of the current page
+    let requestData = {
+      s: $searchBox.val(),
+      page: currPage,
+      type: "movie",
+    };
+
+    // ajaxMovieRequest(requestData, $movies, showMovies);
     $.ajax({
         url: "http://www.omdbapi.com/?",
-        data: {
-          s: $searchBox.val(),
-          page: currPage,
-          type: "movie",
-        },
+        data: requestData,
         dataType : "json",
         beforeSend: function() {
-          $movies.append($loader);
+          showLoader($movies);
         },
     })
-      .done(function(json) {
-        if(json.Response == "False") return;
-
-        $loader.remove();
-
-        // Show # of results
-        $numOfResultContainer.show();
-        $numOfResult.text(json.totalResults);
-
-
-        // Show movies
-        json.Search.forEach(movie => {
-          showMovie(movie.imdbID);
-        });
-
-        // Update # of movies left
-        if(currPage === 1) {
-          moviesLeft = json.totalResults;
-        }
-
-        moviesLeft -= MOV_PER_PAGE;
-        currPage++;
-      });
+      .done(showMovies);
   };
 
-  let showMovie = function(id) {
+
+  // Show 1 page of movies
+  let showMovies = function(moviesJson) {
+    if(moviesJson.Response == "False") return;
+
+    $loader.remove();
+
+    // Show # of results
+    $numOfResultContainer.show();
+    $numOfResult.text(moviesJson.totalResults);
+
+    // Show movies
+    moviesJson.Search.forEach(movie => {
+      requestMovie(movie.imdbID);
+    });
+
+    // Update # of movies left and current page number
+    if(currPage === 1) {
+      moviesLeft = moviesJson.totalResults;
+    }
+    moviesLeft -= MOV_PER_PAGE;
+    currPage++;
+  };
+
+
+  let requestMovie = function(id) {
+    // Data for searching a specific movie with short plot
+    let requestData = {
+      i: id,
+      plot: "short",
+    };
+
     $.ajax({
       url: "http://www.omdbapi.com/?",
-      data: {
-        i: id,
-        plot: "short",
-      },
+      data: requestData,
       dataType: "json",
     })
-      .done(function(json) {
-        const $movie = $(`
-          <div class="movie" id="${json.imdbID}">
-            <div class="poster-container"></div>
-            <div class="description">
-              <span class="title">${json.Title} </span><span class="year"> (${json.Year})</span>
-              <div class="meta">
-                <p><span class="meta-title">Genre:</span> ${json.Genre}</p>
-                <p><span class="meta-title">Rating:</span> ${json.imdbRating}</p>
-              </div>
-              <p class="plot short"><span class="meta-title">Plot:</span> ${json.Plot}</p>
-            </div>
-          </div>
-        `);
-
-        if(json.Poster == "N/A") {
-          $movie.find('.poster-container').addClass('default');
-        } else {
-          const $poster = $(`<img class="poster" src="${json.Poster}">`);
-          $movie.find('.poster-container').append($poster);
-        }
-
-        $movies.append($movie);
-
-        $movie.one('click', requestMovieDetails); // request once
-        $movie.on('click', toggleMovieDetails);
-      });
+      .done(showMovie);
   };
 
 
-  let listenForSearch = function() {
+  // Show one movie
+  let showMovie = function(movieJson) {
+    let $movie = $(`
+      <div class="movie" id="${movieJson.imdbID}">
+        <div class="poster-container"></div>
+        <div class="description">
+          <span class="title">${movieJson.Title} </span><span class="year"> (${movieJson.Year})</span>
+          <div class="meta">
+            <p><span class="meta-title">Genre:</span> ${movieJson.Genre}</p>
+            <p><span class="meta-title">Rating:</span> ${movieJson.imdbRating}</p>
+          </div>
+          <p class="plot short"><span class="meta-title">Plot:</span> ${movieJson.Plot}</p>
+        </div>
+      </div>
+    `);
+
+    if(movieJson.Poster == "N/A") {
+      $movie.find('.poster-container').addClass('default');
+    } else {
+      const $poster = $(`<img class="poster" src="${movieJson.Poster}">`);
+      $movie.find('.poster-container').append($poster);
+    }
+
+    $movies.append($movie);
+
+    // Show movie details on click
+    $movie.one('click', requestMovieDetails); // request data once
+    $movie.on('click', toggleMovieDetails);
+  };
+
+
+  let onSearch = function() {
     $searchBtn.on('click', function(e) {
       e.preventDefault();
       newResult();
@@ -132,42 +155,54 @@ let movieSearch = (function() {
         if (totalHeight - scrollPosition === 0 && !loading) {
           // when scroll to bottom of the page
           $movies.append($loader);
-          showMovies();
+          requestMovies();
         }
       }
     });
   };
 
+
+  // Called to request details when clicking on a movie for the 1st time.
   let requestMovieDetails = function() {
-    let $movie = $(this);
+    const $movie = $(this);
+
+    // Data for searching a movie with full plot
+    let requestData = {
+      i: this.id,
+      plot: "full",
+    };
+
     $.ajax({
       url: "http://www.omdbapi.com/?",
-      data: {
-        i: this.id,
-        plot: "full",
-      },
+      data: requestData,
       dataType: "json",
     })
-      .done(function(json) {
-        let $meta = $(`
-          <div class="extra" style="display:none">
-            <p><span class="meta-title">Runtime:</span> ${json.Runtime}</p>
-            <p><span class="meta-title">Director:</span> ${json.Director}</p>
-            <p><span class="meta-title">Actors:</span> ${json.Actors}</p>
-            <p><span class="meta-title">Language:</span> ${json.Language}</p>
-            <p><span class="meta-title">Country:</span> ${json.Country}</p>
-            <p><span class="meta-title">Awards:</span> ${json.Awards}</p>
-          </div>
-        `);
-        let $fullPlot = $(`<p class="plot full" style="display:none"><span class="meta-title">Plot:</span> ${json.Plot}</p>`);
-        $movie.find('.short.plot').hide();
-        $meta.appendTo($movie.find('.meta')).toggle('slow');
-        $fullPlot.appendTo($movie.find('.description')).toggle('slow');
-
+      .done(function(movieJson) {
+        showMovieDetails(movieJson, $movie);
       });
-
   };
 
+  // Show more detailed info of a movie
+  let showMovieDetails = function(movieJson, $movie) {
+    let $meta = $(`
+      <div class="extra" style="display:none">
+        <p><span class="meta-title">Runtime:</span> ${movieJson.Runtime}</p>
+        <p><span class="meta-title">Director:</span> ${movieJson.Director}</p>
+        <p><span class="meta-title">Actors:</span> ${movieJson.Actors}</p>
+        <p><span class="meta-title">Language:</span> ${movieJson.Language}</p>
+        <p><span class="meta-title">Country:</span> ${movieJson.Country}</p>
+        <p><span class="meta-title">Awards:</span> ${movieJson.Awards}</p>
+      </div>
+    `);
+    let $fullPlot = $(`<p class="plot full" style="display:none"><span class="meta-title">Plot:</span> ${movieJson.Plot}</p>`);
+
+    $movie.find('.short.plot').hide();
+    $meta.appendTo($movie.find('.meta')).toggle('slow');
+    $fullPlot.appendTo($movie.find('.description')).toggle('slow');
+  };
+
+
+  // Called to toggle details when clicking on a movie.
   let toggleMovieDetails = function() {
     let $movie = $(this);
 
