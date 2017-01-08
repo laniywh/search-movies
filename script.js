@@ -7,7 +7,8 @@ let movieSearch = (function() {
   const $searchBtn = $('.search-btn');
   const $numOfResultContainer = $('.num-of-result-container');
   const $numOfResult = $('.num-of-result');
-  const $loader = $('<img class="loader" src="loader.svg">');
+  const $loader = $('<div class="loader white-loader">Loading...</div>');
+  const $yellowLoader = $('<div class="loader yellow-loader">Loading...</div>');
 
   let currPage, moviesLeft, loading;
 
@@ -176,8 +177,12 @@ let movieSearch = (function() {
       url: "http://www.omdbapi.com/?",
       data: requestData,
       dataType: "json",
+      beforeSend: function() {
+        $movie.find('.description').append($yellowLoader);
+      }
     })
       .done(function(movieJson) {
+        $yellowLoader.remove();
         showMovieDetails(movieJson, $movie);
       });
   };
